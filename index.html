@@ -365,6 +365,7 @@ function App() {
   const [confirmClear, setConfirmClear] = useState(false);
 
   const fileInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
 
   useEffect(() => {
     let unsub;
@@ -427,6 +428,7 @@ function App() {
   function resetCapture() {
     setPhoto(null); setResult(null); setExcluded(new Set()); setMultiplier(1); setError(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (galleryInputRef.current) galleryInputRef.current.value = "";
   }
 
   async function handleFileChange(e) {
@@ -534,11 +536,16 @@ function App() {
         {view === "snap" ? (
           <div>
             {!photo ? (
-              <button onClick={() => fileInputRef.current?.click()} className="w-full flex flex-col items-center justify-center gap-2" style={{ background: tokens.card, border: "3px dashed " + tokens.peach, borderRadius: "24px", height: "260px" }}>
-                <Mascot state="idle" size={64} />
-                <span style={{ fontFamily: tokens.fontDisplay, color: tokens.ink }} className="text-lg">戳我拍照!</span>
-                <span style={{ color: tokens.inkSoft }} className="text-xs">可以直接拍照,也能從相簿選一張</span>
-              </button>
+              <div>
+                <button onClick={() => fileInputRef.current?.click()} className="w-full flex flex-col items-center justify-center gap-2" style={{ background: tokens.card, border: "3px dashed " + tokens.peach, borderRadius: "24px", height: "230px" }}>
+                  <Mascot state="idle" size={64} />
+                  <span style={{ fontFamily: tokens.fontDisplay, color: tokens.ink, fontWeight: 700 }} className="text-lg">戳我拍照!</span>
+                  <span style={{ color: tokens.inkSoft }} className="text-xs">用相機拍一張</span>
+                </button>
+                <button onClick={() => galleryInputRef.current?.click()} className="cute-btn w-full mt-3 flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-bold rounded-full" style={{ background: tokens.card, color: tokens.ink }}>
+                  🖼 從相簿選照片
+                </button>
+              </div>
             ) : (
               <div className="relative w-full overflow-hidden" style={{ borderRadius: "24px", border: "1px solid " + tokens.line, height: "260px" }}>
                 <img src={photo.dataUrl} alt="食物照片" className="w-full h-full object-cover" />
@@ -552,6 +559,7 @@ function App() {
             )}
 
             <input ref={fileInputRef} type="file" accept="image/*" capture="environment" onChange={handleFileChange} className="hidden" />
+            <input ref={galleryInputRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" />
 
             {photo && !result && (
               <div className="flex gap-2 mt-3">
