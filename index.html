@@ -247,27 +247,39 @@ function MacroPill({ label, value, color }) {
   );
 }
 
-function SpecimenItem({ item, multiplier, onRemove }) {
+const PORTION_OPTIONS = [
+  { v: 1/3, l: "1/3" }, { v: 0.5, l: "1/2" }, { v: 2/3, l: "2/3" },
+  { v: 1, l: "原份" }, { v: 1.5, l: "1.5" }, { v: 2, l: "兩份" },
+];
+
+function SpecimenItem({ item, multiplier, onSetMultiplier, onRemove }) {
   return (
-    <div className="flex items-start justify-between gap-3 p-3" style={{ borderBottom: "1px dashed " + tokens.line }}>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span style={{ fontFamily: tokens.fontDisplay, color: tokens.ink }} className="text-base">{item.name}</span>
-          <ConfidenceSticker confidence={item.confidence} />
+    <div className="p-3" style={{ borderBottom: "1px dashed " + tokens.line }}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span style={{ fontFamily: tokens.fontDisplay, color: tokens.ink }} className="text-base">{item.name}</span>
+            <ConfidenceSticker confidence={item.confidence} />
+          </div>
+          <div style={{ color: tokens.inkSoft }} className="text-xs mt-1">{item.portionDescription}</div>
+          <div className="flex gap-1.5 mt-2 flex-wrap">
+            <MacroPill label="蛋白質" value={Math.round(item.proteinG * multiplier)} color={tokens.mint} />
+            <MacroPill label="醣類" value={Math.round(item.carbsG * multiplier)} color={tokens.yellow} />
+            <MacroPill label="脂肪" value={Math.round(item.fatG * multiplier)} color={tokens.lavender} />
+          </div>
         </div>
-        <div style={{ color: tokens.inkSoft }} className="text-xs mt-1">{item.portionDescription}</div>
-        <div className="flex gap-1.5 mt-2 flex-wrap">
-          <MacroPill label="蛋白質" value={Math.round(item.proteinG * multiplier)} color={tokens.mint} />
-          <MacroPill label="醣類" value={Math.round(item.carbsG * multiplier)} color={tokens.yellow} />
-          <MacroPill label="脂肪" value={Math.round(item.fatG * multiplier)} color={tokens.lavender} />
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div style={{ fontFamily: tokens.fontNumber, color: tokens.pink }} className="text-xl font-bold">
+            {Math.round(item.calories * multiplier)}
+            <span style={{ fontFamily: tokens.fontBody, color: tokens.inkSoft }} className="text-xs font-normal"> 大卡</span>
+          </div>
+          <button onClick={onRemove} aria-label="移除這個項目" className="rounded-full p-1" style={{ color: tokens.inkSoft }}>✕</button>
         </div>
       </div>
-      <div className="flex flex-col items-end gap-2 flex-shrink-0">
-        <div style={{ fontFamily: tokens.fontNumber, color: tokens.pink }} className="text-xl font-bold">
-          {Math.round(item.calories * multiplier)}
-          <span style={{ fontFamily: tokens.fontBody, color: tokens.inkSoft }} className="text-xs font-normal"> 大卡</span>
-        </div>
-        <button onClick={onRemove} aria-label="移除這個項目" className="rounded-full p-1" style={{ color: tokens.inkSoft }}>✕</button>
+      <div className="flex gap-1 mt-2 flex-wrap">
+        {PORTION_OPTIONS.map((opt) => (
+          <button key={opt.l} onClick={() => onSetMultiplier(opt.v)} className="text-xs px-2 py-1 rounded-full font-medium" style={{ background: Math.abs(multiplier - opt.v) < 0.001 ? tokens.pink : tokens.bg, color: Math.abs(multiplier - opt.v) < 0.001 ? "#fff" : tokens.ink }}>{opt.l}</button>
+        ))}
       </div>
     </div>
   );
@@ -304,9 +316,12 @@ function LedgerRow({ entry, onDelete, onSave }) {
           <label className="text-xs flex items-center gap-1.5" style={{ color: tokens.inkSoft }}>脂肪<input type="number" value={draft.fat} onChange={(e) => setDraft({ ...draft, fat: e.target.value })} className="w-full text-sm px-2 py-1.5" style={fieldStyle} /></label>
         </div>
         <input type="text" value={draft.note || ""} onChange={(e) => setDraft({ ...draft, note: e.target.value })} placeholder="備註" className="w-full text-sm px-3 py-2 mb-2" style={fieldStyle} />
-        <div className="flex gap-2 justify-end">
-          <button onClick={cancelEdit} className="text-xs px-3 py-1.5 rounded-full" style={{ background: tokens.card, color: tokens.inkSoft, border: "1px solid " + tokens.line }}>取消</button>
-          <button onClick={saveEdit} className="text-xs px-3 py-1.5 rounded-full font-bold" style={{ background: tokens.mint, color: tokens.ink }}>儲存</button>
+        <div className="flex items-center justify-between">
+          <button onClick={() => onDelete(entry.id)} className="text-xs px-3 py-1.5 rounded-full font-medium" style={{ background: tokens.card, color: tokens.pink, border: "1px solid " + tokens.pink }}>刪除</button>
+          <div className="flex gap-2">
+            <button onClick={cancelEdit} className="text-xs px-3 py-1.5 rounded-full" style={{ background: tokens.card, color: tokens.inkSoft, border: "1px solid " + tokens.line }}>取消</button>
+            <button onClick={saveEdit} className="text-xs px-3 py-1.5 rounded-full font-bold" style={{ background: tokens.mint, color: tokens.ink }}>儲存</button>
+          </div>
         </div>
       </div>
     );
@@ -324,12 +339,11 @@ function LedgerRow({ entry, onDelete, onSave }) {
           <MacroPill label="醣" value={entry.carbs} color={tokens.yellow} />
           <MacroPill label="脂" value={entry.fat} color={tokens.lavender} />
         </div>
-        {entry.note && <div className="text-xs mt-1" style={{ color: tokens.inkSoft }}>📝 {entry.note}</div>}
+        {entry.note && <div className="text-xs mt-1" style={{ color: tokens.inkSoft }}>備註：{entry.note}</div>}
       </div>
-      <div className="flex items-center gap-1.5 flex-shrink-0">
+      <div className="flex items-center gap-2 flex-shrink-0">
         <span style={{ fontFamily: tokens.fontNumber, color: tokens.pink }} className="text-base font-bold">{entry.calories}</span>
-        <button onClick={startEdit} aria-label="編輯這筆紀錄" style={{ color: tokens.inkSoft }} className="p-1">✏️</button>
-        <button onClick={() => onDelete(entry.id)} aria-label="刪除這筆紀錄" style={{ color: tokens.inkSoft }} className="p-1">🗑</button>
+        <button onClick={startEdit} className="text-xs px-3 py-1.5 rounded-full" style={{ background: tokens.bg, color: tokens.ink, border: "1px solid " + tokens.line }}>編輯</button>
       </div>
     </div>
   );
@@ -395,7 +409,7 @@ function App() {
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState(null);
   const [excluded, setExcluded] = useState(new Set());
-  const [multiplier, setMultiplier] = useState(1);
+  const [multipliers, setMultipliers] = useState({});
   const [error, setError] = useState(null);
   const [justLogged, setJustLogged] = useState(false);
   const [note, setNote] = useState("");
@@ -465,14 +479,14 @@ function App() {
   }, [log.entries]);
 
   function resetCapture() {
-    setPhoto(null); setResult(null); setExcluded(new Set()); setMultiplier(1); setError(null); setNote("");
+    setPhoto(null); setResult(null); setExcluded(new Set()); setMultipliers({}); setError(null); setNote("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   async function handleFileChange(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    setError(null); setResult(null); setExcluded(new Set()); setMultiplier(1);
+    setError(null); setResult(null); setExcluded(new Set()); setMultipliers({});
     try { setPhoto(await resizeImage(file)); }
     catch (err) { setError("飯飯讀不出這張照片,換一張試試看!"); }
   }
@@ -488,13 +502,18 @@ function App() {
     finally { setAnalyzing(false); }
   }
 
+  const mult = (i) => (multipliers[i] === undefined ? 1 : multipliers[i]);
   const activeItems = result ? result.items.filter((_, i) => !excluded.has(i)) : [];
-  const totals = activeItems.reduce((acc, it) => ({
-    calories: acc.calories + it.calories * multiplier,
-    protein: acc.protein + it.proteinG * multiplier,
-    carbs: acc.carbs + it.carbsG * multiplier,
-    fat: acc.fat + it.fatG * multiplier,
-  }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+  const totals = result ? result.items.reduce((acc, it, i) => {
+    if (excluded.has(i)) return acc;
+    const m = mult(i);
+    return {
+      calories: acc.calories + it.calories * m,
+      protein: acc.protein + it.proteinG * m,
+      carbs: acc.carbs + it.carbsG * m,
+      fat: acc.fat + it.fatG * m,
+    };
+  }, { calories: 0, protein: 0, carbs: 0, fat: 0 }) : { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
   async function handleSaveEntry() {
     if (!result || activeItems.length === 0 || !authUser) return;
@@ -621,20 +640,11 @@ function App() {
                     <span style={{ fontFamily: tokens.fontDisplay, color: tokens.ink }} className="text-lg">{result.mealName || "這一餐"}</span>
                   </div>
                   {result.items.map((item, i) => excluded.has(i) ? null : (
-                    <SpecimenItem key={i} item={item} multiplier={multiplier} onRemove={() => setExcluded((prev) => new Set(prev).add(i))} />
+                    <SpecimenItem key={i} item={item} multiplier={mult(i)} onSetMultiplier={(v) => setMultipliers((prev) => ({ ...prev, [i]: v }))} onRemove={() => setExcluded((prev) => new Set(prev).add(i))} />
                   ))}
                   {activeItems.length === 0 && (
                     <div className="p-4 text-sm text-center" style={{ color: tokens.inkSoft }}>所有項目都被移除了。</div>
                   )}
-
-                  <div className="px-4 py-3 flex items-center justify-between flex-wrap gap-2" style={{ borderTop: "1px dashed " + tokens.line }}>
-                    <span style={{ color: tokens.inkSoft }} className="text-xs">份量倍數</span>
-                    <div className="flex gap-1.5">
-                      {[{ v: 0.5, l: "半份" }, { v: 1, l: "原份" }, { v: 1.5, l: "1.5份" }, { v: 2, l: "兩份" }].map((opt) => (
-                        <button key={opt.v} onClick={() => setMultiplier(opt.v)} className="text-xs px-2.5 py-1.5 rounded-full font-medium" style={{ background: multiplier === opt.v ? tokens.pink : tokens.bg, color: multiplier === opt.v ? "#fff" : tokens.ink }}>{opt.l}</button>
-                      ))}
-                    </div>
-                  </div>
 
                   <div className="px-4 py-3" style={{ borderTop: "1px dashed " + tokens.line }}>
                     <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="加個備註(例如:外食、加了美乃滋)" className="w-full text-sm px-3 py-2 rounded-2xl" style={{ background: tokens.bg, border: "1px solid " + tokens.line, color: tokens.ink }} />
