@@ -273,8 +273,45 @@ function SpecimenItem({ item, multiplier, onRemove }) {
   );
 }
 
-function LedgerRow({ entry, onDelete }) {
+function LedgerRow({ entry, onDelete, onSave }) {
   const time = new Date(entry.ts).toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" });
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(entry);
+
+  function startEdit() { setDraft(entry); setEditing(true); }
+  function cancelEdit() { setEditing(false); }
+  function num(v) { const n = parseInt(v, 10); return Number.isFinite(n) && n >= 0 ? n : 0; }
+  function saveEdit() {
+    onSave(entry.id, {
+      mealName: draft.mealName.trim() || entry.mealName,
+      calories: num(draft.calories), protein: num(draft.protein),
+      carbs: num(draft.carbs), fat: num(draft.fat),
+      note: (draft.note || "").trim(),
+    });
+    setEditing(false);
+  }
+
+  const fieldStyle = { background: tokens.bg, border: "1px solid " + tokens.line, color: tokens.ink, borderRadius: "10px" };
+
+  if (editing) {
+    return (
+      <div className="py-3" style={{ borderBottom: "1px dashed " + tokens.line }}>
+        <input type="text" value={draft.mealName} onChange={(e) => setDraft({ ...draft, mealName: e.target.value })} placeholder="餐點名稱" className="w-full text-sm px-3 py-2 mb-2" style={fieldStyle} />
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <label className="text-xs flex items-center gap-1.5" style={{ color: tokens.inkSoft }}>熱量<input type="number" value={draft.calories} onChange={(e) => setDraft({ ...draft, calories: e.target.value })} className="w-full text-sm px-2 py-1.5" style={fieldStyle} /></label>
+          <label className="text-xs flex items-center gap-1.5" style={{ color: tokens.inkSoft }}>蛋白質<input type="number" value={draft.protein} onChange={(e) => setDraft({ ...draft, protein: e.target.value })} className="w-full text-sm px-2 py-1.5" style={fieldStyle} /></label>
+          <label className="text-xs flex items-center gap-1.5" style={{ color: tokens.inkSoft }}>醣類<input type="number" value={draft.carbs} onChange={(e) => setDraft({ ...draft, carbs: e.target.value })} className="w-full text-sm px-2 py-1.5" style={fieldStyle} /></label>
+          <label className="text-xs flex items-center gap-1.5" style={{ color: tokens.inkSoft }}>脂肪<input type="number" value={draft.fat} onChange={(e) => setDraft({ ...draft, fat: e.target.value })} className="w-full text-sm px-2 py-1.5" style={fieldStyle} /></label>
+        </div>
+        <input type="text" value={draft.note || ""} onChange={(e) => setDraft({ ...draft, note: e.target.value })} placeholder="備註" className="w-full text-sm px-3 py-2 mb-2" style={fieldStyle} />
+        <div className="flex gap-2 justify-end">
+          <button onClick={cancelEdit} className="text-xs px-3 py-1.5 rounded-full" style={{ background: tokens.card, color: tokens.inkSoft, border: "1px solid " + tokens.line }}>取消</button>
+          <button onClick={saveEdit} className="text-xs px-3 py-1.5 rounded-full font-bold" style={{ background: tokens.mint, color: tokens.ink }}>儲存</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center justify-between gap-3 py-3" style={{ borderBottom: "1px dashed " + tokens.line }}>
       <div className="min-w-0">
@@ -287,9 +324,11 @@ function LedgerRow({ entry, onDelete }) {
           <MacroPill label="醣" value={entry.carbs} color={tokens.yellow} />
           <MacroPill label="脂" value={entry.fat} color={tokens.lavender} />
         </div>
+        {entry.note && <div className="text-xs mt-1" style={{ color: tokens.inkSoft }}>📝 {entry.note}</div>}
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
+      <div className="flex items-center gap-1.5 flex-shrink-0">
         <span style={{ fontFamily: tokens.fontNumber, color: tokens.pink }} className="text-base font-bold">{entry.calories}</span>
+        <button onClick={startEdit} aria-label="編輯這筆紀錄" style={{ color: tokens.inkSoft }} className="p-1">✏️</button>
         <button onClick={() => onDelete(entry.id)} aria-label="刪除這筆紀錄" style={{ color: tokens.inkSoft }} className="p-1">🗑</button>
       </div>
     </div>
@@ -359,6 +398,7 @@ function App() {
   const [multiplier, setMultiplier] = useState(1);
   const [error, setError] = useState(null);
   const [justLogged, setJustLogged] = useState(false);
+  const [note, setNote] = useState("");
 
   const [editingGoal, setEditingGoal] = useState(false);
   const [goalInput, setGoalInput] = useState("2000");
@@ -425,7 +465,7 @@ function App() {
   }, [log.entries]);
 
   function resetCapture() {
-    setPhoto(null); setResult(null); setExcluded(new Set()); setMultiplier(1); setError(null);
+    setPhoto(null); setResult(null); setExcluded(new Set()); setMultiplier(1); setError(null); setNote("");
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -464,6 +504,7 @@ function App() {
       mealName: result.mealName || activeItems.map((i) => i.name).join("、"),
       calories: Math.round(totals.calories), protein: Math.round(totals.protein),
       carbs: Math.round(totals.carbs), fat: Math.round(totals.fat),
+      note: note.trim(),
     };
     const newLog = { ...log, entries: [entry, ...log.entries] };
     setLog(newLog);
@@ -475,6 +516,12 @@ function App() {
 
   async function handleDeleteEntry(id) {
     const newLog = { ...log, entries: log.entries.filter((e) => e.id !== id) };
+    setLog(newLog);
+    await saveLog(authUser.uid, newLog);
+  }
+
+  async function handleEditEntry(id, patch) {
+    const newLog = { ...log, entries: log.entries.map((e) => e.id === id ? { ...e, ...patch } : e) };
     setLog(newLog);
     await saveLog(authUser.uid, newLog);
   }
@@ -589,6 +636,9 @@ function App() {
                     </div>
                   </div>
 
+                  <div className="px-4 py-3" style={{ borderTop: "1px dashed " + tokens.line }}>
+                    <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="加個備註(例如:外食、加了美乃滋)" className="w-full text-sm px-3 py-2 rounded-2xl" style={{ background: tokens.bg, border: "1px solid " + tokens.line, color: tokens.ink }} />
+                  </div>
                   <div className="px-4 py-3.5 flex items-center justify-between" style={{ background: tokens.bg }}>
                     <span style={{ fontFamily: tokens.fontDisplay, color: tokens.ink }} className="text-sm">這份餐點共</span>
                     <span style={{ fontFamily: tokens.fontNumber, color: tokens.pink }} className="text-3xl font-bold">
@@ -668,7 +718,7 @@ function App() {
                         <span className="text-xs font-medium px-2.5 py-0.5 rounded-full" style={{ background: tokens.bg, color: tokens.inkSoft }}>{label}</span>
                         <span style={{ color: tokens.inkSoft }} className="text-xs">{dayTotal} 大卡</span>
                       </div>
-                      {entries.map((entry) => (<LedgerRow key={entry.id} entry={entry} onDelete={handleDeleteEntry} />))}
+                      {entries.map((entry) => (<LedgerRow key={entry.id} entry={entry} onDelete={handleDeleteEntry} onSave={handleEditEntry} />))}
                     </div>
                   );
                 })
