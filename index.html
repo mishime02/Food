@@ -27,6 +27,24 @@
 </style>
 </head>
 <body>
+<div id="error-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#AE4E38;color:#fff;font-family:monospace;font-size:12px;padding:12px;white-space:pre-wrap;word-break:break-all;max-height:60vh;overflow:auto;"></div>
+<script>
+  (function(){
+    function show(msg){
+      var b=document.getElementById('error-banner');
+      if(!b) return;
+      b.style.display='block';
+      b.textContent += msg + '\n\n';
+    }
+    window.addEventListener('error', function(e){
+      if(e.message){ show('錯誤: ' + e.message + (e.filename?(' @ '+e.filename+':'+e.lineno):'')); }
+      else if(e.target && (e.target.src||e.target.href)){ show('載入失敗: ' + (e.target.src||e.target.href)); }
+    }, true);
+    window.addEventListener('unhandledrejection', function(e){
+      show('Promise 錯誤: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+    });
+  })();
+</script>
 <div id="root"></div>
 
 <!-- Firebase 初始化(原生 ES module,負責登入/資料庫/AI) -->
@@ -66,9 +84,9 @@
 </script>
 
 <!-- React + Babel(讓瀏覽器直接讀懂下面這段 JSX,不需要建置流程) -->
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js" crossorigin></script>
 
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useRef, useMemo } = React;
@@ -162,41 +180,50 @@ const tokens = {
   bg: "#FFF6EE", ink: "#4A3F3B", inkSoft: "#A6968B", pink: "#FF7FA0",
   mint: "#BFEBD4", yellow: "#FFD66B", lavender: "#D9CCF0", peach: "#FFD9C0",
   card: "#FFFFFF", line: "#F2E4D8",
-  fontDisplay: "'ZCOOL KuaiLe', sans-serif", fontBody: "'Noto Sans TC', sans-serif", fontNumber: "'Baloo 2', sans-serif",
+  fontDisplay: "'Noto Sans TC', sans-serif", fontBody: "'Noto Sans TC', sans-serif", fontNumber: "'Baloo 2', sans-serif",
 };
 
 function Mascot({ state = "idle", size = 72 }) {
   return (
     <svg viewBox="0 0 100 100" width={size} height={size} className={state === "idle" ? "mascot-bounce" : ""}>
-      <ellipse cx="50" cy="58" rx="38" ry="32" fill="#FFD9C0" />
-      <ellipse cx="50" cy="30" rx="6" ry="10" fill="#BFE8D2" opacity="0.8" />
+      {/* 飯糰主體:矮胖、底寬、頂角圓鈍 */}
+      <path d="M50 24 C58 24 63 30 67 37 L88 74 C92 81 88 90 79 91 C70 92 60 93 50 93 C40 93 30 92 21 91 C12 90 8 81 12 74 L33 37 C37 30 42 24 50 24 Z" fill="#FCFAF4" stroke="#EDE6D6" strokeWidth="2" />
+      {/* 米粒質感小點 */}
+      <circle cx="40" cy="46" r="1.4" fill="#ECE6D6" />
+      <circle cx="61" cy="50" r="1.4" fill="#ECE6D6" />
+      <circle cx="33" cy="62" r="1.4" fill="#ECE6D6" />
+      <circle cx="68" cy="64" r="1.4" fill="#ECE6D6" />
+      {/* 正面方形海苔(中間偏下) */}
+      <rect x="40" y="68" width="20" height="20" rx="3" fill="#3C5A45" />
       {state === "scanning" ? (
         <>
-          <path d="M30 55 q6 6 12 0" stroke="#4A3F3B" strokeWidth="3" fill="none" strokeLinecap="round" />
-          <path d="M58 55 q6 6 12 0" stroke="#4A3F3B" strokeWidth="3" fill="none" strokeLinecap="round" />
+          <path d="M37 52 q5 5 10 0" stroke="#4A3F3B" strokeWidth="3" fill="none" strokeLinecap="round" />
+          <path d="M53 52 q5 5 10 0" stroke="#4A3F3B" strokeWidth="3" fill="none" strokeLinecap="round" />
         </>
       ) : state === "happy" ? (
         <>
-          <path d="M30 58 q6 -9 12 0" stroke="#4A3F3B" strokeWidth="3" fill="none" strokeLinecap="round" />
-          <path d="M58 58 q6 -9 12 0" stroke="#4A3F3B" strokeWidth="3" fill="none" strokeLinecap="round" />
+          <path d="M37 54 q5 -7 10 0" stroke="#4A3F3B" strokeWidth="3" fill="none" strokeLinecap="round" />
+          <path d="M53 54 q5 -7 10 0" stroke="#4A3F3B" strokeWidth="3" fill="none" strokeLinecap="round" />
         </>
       ) : (
         <>
-          <circle cx="36" cy="55" r="4" fill="#4A3F3B" />
-          <circle cx="64" cy="55" r="4" fill="#4A3F3B" />
+          <circle cx="42" cy="52" r="3.5" fill="#4A3F3B" />
+          <circle cx="58" cy="52" r="3.5" fill="#4A3F3B" />
         </>
       )}
-      <circle cx="27" cy="68" r="5" fill="#FF9EB5" opacity="0.55" />
-      <circle cx="73" cy="68" r="5" fill="#FF9EB5" opacity="0.55" />
+      {/* 紅暈 */}
+      <circle cx="34" cy="60" r="4.5" fill="#FF9EB5" opacity="0.55" />
+      <circle cx="66" cy="60" r="4.5" fill="#FF9EB5" opacity="0.55" />
+      {/* 嘴巴 */}
       {state === "scanning" ? (
-        <circle cx="50" cy="74" r="3" fill="#4A3F3B" />
+        <circle cx="50" cy="64" r="2.5" fill="#4A3F3B" />
       ) : (
-        <path d="M42 72 q8 8 16 0" stroke="#4A3F3B" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M45 63 q5 6 10 0" stroke="#4A3F3B" strokeWidth="2.5" fill="none" strokeLinecap="round" />
       )}
       {state === "happy" && (
         <>
-          <path d="M15 35 l4 -8 4 8 8 4 -8 4 -4 8 -4 -8 -8 -4 z" fill="#FFD66B" className="sparkle" />
-          <path d="M78 28 l3 -6 3 6 6 3 -6 3 -3 6 -3 -6 -6 -3 z" fill="#FF9EB5" className="sparkle" />
+          <path d="M14 32 l3.5 -7 3.5 7 7 3.5 -7 3.5 -3.5 7 -3.5 -7 -7 -3.5 z" fill="#FFD66B" className="sparkle" />
+          <path d="M80 26 l3 -6 3 6 6 3 -6 3 -3 6 -3 -6 -6 -3 z" fill="#FF9EB5" className="sparkle" />
         </>
       )}
     </svg>
@@ -305,7 +332,7 @@ function LoginScreen({ onGoogle, onGuest, busy, error }) {
     <div className="min-h-screen w-full flex items-center justify-center p-4" style={{ background: tokens.bg }}>
       <div className="cute-card p-6 rounded-3xl flex flex-col items-center gap-3 w-full" style={{ background: tokens.card, maxWidth: "320px" }}>
         <Mascot state="idle" size={72} />
-        <h1 style={{ fontFamily: tokens.fontDisplay, color: tokens.ink }} className="text-2xl">飯飯食記</h1>
+        <h1 style={{ fontFamily: tokens.fontBody, color: tokens.ink, fontWeight: 700 }} className="text-2xl">飯飯食記</h1>
         <p style={{ color: tokens.inkSoft }} className="text-sm text-center">拍張照,飯飯幫你算熱量唷!先登入才能保存你的紀錄。</p>
         <button onClick={onGoogle} disabled={busy} className="cute-btn w-full rounded-full py-2.5 text-sm font-bold" style={{ background: tokens.pink, color: "#fff" }}>用 Google 登入</button>
         <button onClick={onGuest} disabled={busy} className="cute-btn w-full rounded-full py-2.5 text-sm font-medium" style={{ background: tokens.card, color: tokens.ink, border: "1px solid " + tokens.line }}>先逛逛(訪客模式)</button>
@@ -480,7 +507,7 @@ function App() {
           <div className="flex items-center gap-3">
             <Mascot state="idle" size={48} />
             <div>
-              <h1 style={{ fontFamily: tokens.fontDisplay, color: tokens.ink }} className="text-2xl">飯飯食記</h1>
+              <h1 style={{ fontFamily: tokens.fontBody, color: tokens.ink, fontWeight: 700 }} className="text-2xl">飯飯食記</h1>
               <p style={{ color: tokens.inkSoft }} className="text-xs mt-0.5">拍張照,飯飯幫你算熱量唷!</p>
             </div>
           </div>
